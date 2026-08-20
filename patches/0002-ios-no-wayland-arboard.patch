@@ -1,0 +1,12 @@
+diff --git a/codex-rs/Cargo.toml b/codex-rs/Cargo.toml
+--- a/codex-rs/Cargo.toml
++++ b/codex-rs/Cargo.toml
+@@ -283,7 +283,7 @@
+ age = "0.11.1"
+ ansi-to-tui = "8.0.1"
+ anyhow = "1"
+-arboard = { version = "3", features = ["wayland-data-control"] }
++arboard = { version = "3" }
+ arc-swap = "1.9.0"
+ assert_cmd = "2"
+ assert_matches = "1.5.0"

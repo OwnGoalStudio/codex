@@ -53,7 +53,7 @@ rustup target add "$rust_target" --toolchain "$RUST_TOOLCHAIN" >&2
 
 export SDKROOT="$sdk_path"
 export IPHONEOS_DEPLOYMENT_TARGET="$MIN_IOS"
-export MACOSX_DEPLOYMENT_TARGET=""
+unset MACOSX_DEPLOYMENT_TARGET
 # Stop pkg-config from feeding macOS .pc files into an iOS link.
 export PKG_CONFIG_ALLOW_CROSS=1
 unset PKG_CONFIG_PATH PKG_CONFIG_LIBDIR || true
