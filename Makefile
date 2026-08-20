@@ -50,8 +50,8 @@ $(error $(VERSION_FILE) is missing or empty; run make set-version VERSION=x.y.z)
 endif
 
 .PHONY: all help print-version print-upstream print-deb-path set-version \
-	bump-upstream check source build deb deb-roothide deb-rootless debs \
-	checksums install clean
+	bump-upstream follow-upstream check source build deb deb-roothide \
+	deb-rootless debs checksums install clean
 
 .NOTPARALLEL:
 
@@ -74,6 +74,7 @@ help:
 	@echo
 	@echo "  make set-version VERSION=1.2.3   Set the package version"
 	@echo "  make bump-upstream REF=<sha>     Repin upstream and rebuild"
+	@echo "  make follow-upstream             Pin to newest stable rust-vX.Y.Z"
 
 print-version:
 	@echo "$(PACKAGE_VERSION)"
@@ -153,6 +154,9 @@ bump-upstream:
 	@sed -i '' -e "s|^UPSTREAM_REF=.*|UPSTREAM_REF=$(REF)|" "$(CONFIG_DIR)/upstream.env"
 	@echo "repinned upstream to $(REF)"
 	@$(MAKE) --no-print-directory build
+
+follow-upstream:
+	@"$(ROOT_DIR)/Scripts/follow-upstream.sh"
 
 clean:
 	rm -rf "$(BUILD_DIR)"

@@ -94,3 +94,8 @@ binary runs with its entitlements ignored (trustcache never saw it).
 
 Same as kk: a non-draft, non-prerelease tag `vX.Y.Z`; assets whose names end
 in `iphoneos-arm64.deb` / `iphoneos-arm64e.deb`; a `SHA256SUMS` of bare names.
+
+`Follow upstream` runs daily at 00:00 UTC: pin to the newest stable
+`openai/codex` `rust-vX.Y.Z` release, `make source` to prove `patches/` still
+apply, then commit and tag `vX.Y.Z` as `bot <bot@owngoal.dev>`. `Release` builds
+that tag. OwnGoalPackages fetches it at 04:00 UTC.

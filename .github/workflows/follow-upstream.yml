@@ -1,0 +1,72 @@
+# Once a day, pin to the newest stable openai/codex rust-vX.Y.Z release.
+# If the pin moves and patches/ still apply, commit and tag vX.Y.Z.
+# release.yml builds that tag; OwnGoalPackages picks it up at 04:00 UTC.
+
+name: Follow upstream
+
+on:
+  schedule:
+    # Ahead of OwnGoalPackages' 04:00 UTC fetch, so the Release has time to build.
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: follow-upstream
+  cancel-in-progress: false
+
+jobs:
+  pin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out packaging repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Follow openai/codex
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          chmod +x Scripts/follow-upstream.sh
+          read -r new_version new_ref new_tag <<<"$(./Scripts/follow-upstream.sh --print)"
+          current_ref="$(make --no-print-directory print-upstream)"
+          echo "current $current_ref"
+          echo "latest  $new_version ($new_tag) @ $new_ref"
+          if [[ "$new_ref" == "$current_ref" ]]; then
+            echo "already pinned"
+            echo "changed=false" >>"$GITHUB_ENV"
+            exit 0
+          fi
+          if git rev-parse "refs/tags/v${new_version}" >/dev/null 2>&1; then
+            echo "tag v${new_version} already exists; not retagging"
+            echo "changed=false" >>"$GITHUB_ENV"
+            exit 0
+          fi
+          ./Scripts/follow-upstream.sh
+          echo "changed=true" >>"$GITHUB_ENV"
+          echo "new_version=${new_version}" >>"$GITHUB_ENV"
+          echo "new_ref=${new_ref}" >>"$GITHUB_ENV"
+
+      - name: Commit pin and tag
+        if: env.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name "bot"
+          git config user.email "bot@owngoal.dev"
+          git add Configuration/upstream.env Configuration/version.txt
+          git commit -m "Bump upstream to rust-v${new_version}
+
+          openai/codex ${new_ref}
+          "
+          git tag "v${new_version}"
+          git push origin HEAD:main
+          git push origin "v${new_version}"
