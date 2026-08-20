@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  codex is a command-line agent: it is launched from a shell, it spawns shells of
+  its own, and it reads and writes the tree it was pointed at. Three
+  entitlements make that work on a jailbroken device:
+
+  platform-application
+      Marks the binary as a platform binary. An ad-hoc signed executable
+      without it is denied the process-spawning and file access below.
+
+  com.apple.private.security.no-sandbox
+      The agent's whole job is touching files outside any container.
+
+  com.apple.private.security.container-required = false
+      Keeps codex out of a data container, so HOME resolves to the real home of
+      whoever ran it (~/.codex) instead of a per-binary container the next
+      install would orphan. Absence is not equivalent: the switch has to be
+      explicitly false.
+-->
+<plist version="1.0">
+<dict>
+	<key>platform-application</key>
+	<true/>
+	<key>com.apple.private.security.no-sandbox</key>
+	<true/>
+	<key>com.apple.private.security.container-required</key>
+	<false/>
+</dict>
+</plist>

@@ -1,0 +1,18 @@
+Package: @PACKAGE_ID@
+Name: codex
+Version: @VERSION@
+Architecture: @ARCHITECTURE@
+Description: OpenAI Codex CLI for jailbroken iOS
+ OpenAI's terminal coding agent (`codex`), cross-compiled for iOS and
+ packaged for both roothide and rootless bootstraps from one arm64 build.
+ The architecture field says which layout this package is, not which CPU
+ it runs on. Upstream is @UPSTREAM@.
+ .
+ Run `codex` in a terminal on device. Sign in with ChatGPT or an API key
+ (`uiopen` must be on PATH for the browser flow).
+Maintainer: OwnGoal Studio <not-gonna-reply@owngoal.dev>
+Author: OpenAI <https://github.com/openai/codex>
+Section: Utilities
+Priority: optional
+Depends: firmware (>= @MIN_IOS@), uikittools
+Installed-Size: @INSTALLED_SIZE@

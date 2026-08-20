@@ -1,0 +1,54 @@
+diff --git a/codex-rs/shell-command/src/shell_detect.rs b/codex-rs/shell-command/src/shell_detect.rs
+--- a/codex-rs/shell-command/src/shell_detect.rs
++++ b/codex-rs/shell-command/src/shell_detect.rs
+@@ -158,7 +158,7 @@
+     None
+ }
+ 
+-const ZSH_FALLBACK_PATHS: &[&str] = &["/bin/zsh"];
++const ZSH_FALLBACK_PATHS: &[&str] = &["/var/jb/bin/zsh", "/var/jb/usr/bin/zsh", "/bin/zsh", "/usr/bin/zsh"];
+ 
+ fn get_zsh_shell() -> Option<DetectedShell> {
+     let shell_path = get_shell_path(ShellType::Zsh, "zsh", ZSH_FALLBACK_PATHS);
+@@ -169,7 +169,7 @@
+     })
+ }
+ 
+-const BASH_FALLBACK_PATHS: &[&str] = &["/bin/bash", "/usr/bin/bash"];
++const BASH_FALLBACK_PATHS: &[&str] = &["/var/jb/bin/bash", "/var/jb/usr/bin/bash", "/bin/bash", "/usr/bin/bash"];
+ 
+ fn get_bash_shell() -> Option<DetectedShell> {
+     let shell_path = get_shell_path(ShellType::Bash, "bash", BASH_FALLBACK_PATHS);
+@@ -180,7 +180,7 @@
+     })
+ }
+ 
+-const SH_FALLBACK_PATHS: &[&str] = &["/bin/sh"];
++const SH_FALLBACK_PATHS: &[&str] = &["/var/jb/bin/sh", "/var/jb/usr/bin/sh", "/bin/sh", "/usr/bin/sh"];
+ 
+ fn get_sh_shell() -> Option<DetectedShell> {
+     let shell_path = get_shell_path(ShellType::Sh, "sh", SH_FALLBACK_PATHS);
+@@ -241,7 +241,13 @@
+     } else {
+         DetectedShell {
+             shell_type: ShellType::Sh,
+-            shell_path: PathBuf::from("/bin/sh"),
++            shell_path: PathBuf::from(
++                ["/var/jb/bin/sh", "/var/jb/usr/bin/sh", "/bin/sh", "/usr/bin/sh"]
++                    .into_iter()
++                    .map(PathBuf::from)
++                    .find(|path| file_exists(path).is_some())
++                    .unwrap_or_else(|| PathBuf::from("/bin/sh")),
++            ),
+         }
+     }
+ }
+@@ -275,7 +281,7 @@
+             .and_then(|shell| detect_shell_type(&shell))
+             .and_then(get_shell);
+ 
+-        let shell_with_fallback = if cfg!(target_os = "macos") {
++        let shell_with_fallback = if cfg!(any(target_os = "macos", target_os = "ios")) {
+             user_default_shell
+                 .or_else(|| get_shell(ShellType::Zsh))
+                 .or_else(|| get_shell(ShellType::Bash))
