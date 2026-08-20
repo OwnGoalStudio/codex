@@ -110,7 +110,8 @@ check:
 	done
 	@echo "==> packaging inputs"
 	@for input in Packaging/DEBIAN/control Packaging/codex.entitlements \
-		Packaging/codex.launcher.sh Packaging/release-notes.md; do \
+		Packaging/codex.launcher.sh Packaging/release-notes.md \
+		Packaging/etc/codex/config.toml; do \
 		test -f "$(ROOT_DIR)/$$input" || { echo "error: missing $$input" >&2; exit 66; }; \
 	done
 	@plutil -lint "$(ROOT_DIR)/Packaging/codex.entitlements"

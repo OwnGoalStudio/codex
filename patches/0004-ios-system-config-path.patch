@@ -1,0 +1,22 @@
+diff --git a/codex-rs/config/src/loader/mod.rs b/codex-rs/config/src/loader/mod.rs
+--- a/codex-rs/config/src/loader/mod.rs
++++ b/codex-rs/config/src/loader/mod.rs
+@@ -789,6 +789,18 @@
+ 
+ #[cfg(unix)]
+ pub fn system_config_toml_file() -> io::Result<AbsolutePathBuf> {
++    // iOS jailbreaks: Codex is not libvroot-linked, so the real `/etc` is
++    // empty. Probe the rootless prefix first; roothide's `/var/jb` compat
++    // symlink hits the same file the unprefixed package installs into jbroot.
++    for candidate in [
++        "/var/jb/etc/codex/config.toml",
++        SYSTEM_CONFIG_TOML_FILE_UNIX,
++    ] {
++        let path = Path::new(candidate);
++        if path.is_file() {
++            return AbsolutePathBuf::from_absolute_path(path);
++        }
++    }
+     AbsolutePathBuf::from_absolute_path(Path::new(SYSTEM_CONFIG_TOML_FILE_UNIX))
+ }
+ 

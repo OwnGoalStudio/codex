@@ -1,0 +1,29 @@
+# OwnGoal Studio defaults for jailbroken iOS.
+# This is the system config layer (`/etc/codex/config.toml` or
+# `/var/jb/etc/codex/config.toml`). User `$CODEX_HOME/config.toml` overrides it.
+
+file_opener = "none"
+include_apps_instructions = false
+
+[features]
+# ChatGPT Apps / connectors (Figma, GitHub, Linear, …) need a desktop host.
+apps = false
+
+# Code Mode is a V8 sidecar (`codex-code-mode-host`). No iOS V8 build,
+# and the official Darwin/Linux archives do not target apple-ios.
+code_mode = false
+code_mode_host = false
+
+# GUI / CDP / desktop-control surfaces. This is a terminal on a phone.
+in_app_updates = false
+in_app_browser = false
+in_app_chat = false
+in_app_dictation = false
+browser_use = false
+browser_use_external = false
+browser_use_full_cdp_access = false
+computer_use = false
+
+# Remote plugin marketplace pulls a large cache of desktop skills.
+# Local plugins/skills in $CODEX_HOME still work.
+remote_plugin = false

@@ -32,8 +32,9 @@ package_id="${PACKAGE_ID:-wiki.qaq.codex}"
 control_template="$repository_root/Packaging/DEBIAN/control"
 entitlements="$repository_root/Packaging/${PROGRAM}.entitlements"
 launcher_template="$repository_root/Packaging/${PROGRAM}.launcher.sh"
+system_config="$repository_root/Packaging/etc/codex/config.toml"
 
-for input in "$control_template" "$entitlements" "$launcher_template"; do
+for input in "$control_template" "$entitlements" "$launcher_template" "$system_config"; do
     [[ -f "$input" ]] || { echo "error: missing packaging input: $input" >&2; exit 66; }
 done
 
@@ -70,10 +71,13 @@ debian="$staging/DEBIAN"
 installed_root="$staging$install_prefix"
 installed_libexec="$installed_root/usr/libexec/$PROGRAM"
 installed_launcher="$installed_root/usr/bin/$PROGRAM"
-mkdir -p "$debian" "$(dirname "$installed_libexec")" "$(dirname "$installed_launcher")"
+installed_system_config="$installed_root/etc/codex/config.toml"
+mkdir -p "$debian" "$(dirname "$installed_libexec")" "$(dirname "$installed_launcher")" "$(dirname "$installed_system_config")"
 
 /usr/bin/ditto "$payload" "$installed_libexec"
 sed -e "s|@PREFIX@|$install_prefix|g" "$launcher_template" >"$installed_launcher"
+/usr/bin/ditto "$system_config" "$installed_system_config"
+chmod 0644 "$installed_system_config"
 
 chmod 0755 "$installed_launcher" "$installed_libexec/$PROGRAM"
 chmod -R a+rX "$installed_libexec"
@@ -140,7 +144,8 @@ dpkg-deb --root-owner-group -Zzstd -b "$staging" "$temporary_deb" >/dev/null
 contents="$(dpkg-deb --contents "$temporary_deb")"
 for path in \
     "$install_prefix/usr/bin/$PROGRAM" \
-    "$install_prefix/usr/libexec/$PROGRAM/$PROGRAM"; do
+    "$install_prefix/usr/libexec/$PROGRAM/$PROGRAM" \
+    "$install_prefix/etc/codex/config.toml"; do
     grep -qF ".$path" <<<"$contents" || {
         echo "error: package is missing $path" >&2
         exit 65
