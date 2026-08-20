@@ -14,5 +14,5 @@ Maintainer: OwnGoal Studio <not-gonna-reply@owngoal.dev>
 Author: OpenAI <https://github.com/openai/codex>
 Section: Utilities
 Priority: optional
-Depends: firmware (>= @MIN_IOS@), uikittools
+Depends: firmware (>= @MIN_IOS@), uikittools, ca-certificates
 Installed-Size: @INSTALLED_SIZE@
