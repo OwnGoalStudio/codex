@@ -30,7 +30,16 @@ patches=("$patch_dir"/*.patch)
 shopt -u nullglob
 ((${#patches[@]} > 0)) || { echo "error: patches/ holds no .patch files" >&2; exit 66; }
 
+version_file="$repository_root/Configuration/version.txt"
+package_version="$(tr -d '[:space:]' <"$version_file")"
+cargo_version="${package_version%%-*}"
+[[ "$cargo_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+    echo "error: cargo version derived from '$package_version' is not X.Y.Z" >&2
+    exit 65
+}
+
 stamp_input="$UPSTREAM_REPO@$UPSTREAM_REF"$'\n'
+stamp_input+="cargo-version $cargo_version"$'\n'
 for patch in "${patches[@]}"; do
     stamp_input+="$(shasum -a 256 "$patch" | cut -d ' ' -f 1)  $(basename "$patch")"$'\n'
 done
@@ -68,6 +77,27 @@ for patch in "${patches[@]}"; do
         exit 65
     fi
 done
+
+# Official releases rewrite the workspace 0.0.0 at tag time. Do the same so
+# `codex --version` matches the package, not the in-tree placeholder.
+: "${CARGO_DIR:?Configuration/upstream.env must set CARGO_DIR}"
+workspace_toml="$work_dir/$CARGO_DIR/Cargo.toml"
+[[ -f "$workspace_toml" ]] || {
+    echo "error: missing workspace Cargo.toml at $workspace_toml" >&2
+    exit 66
+}
+python3 - "$workspace_toml" "$cargo_version" <<'PY'
+from pathlib import Path
+import sys
+path = Path(sys.argv[1])
+version = sys.argv[2]
+text = path.read_text()
+needle = 'version = "0.0.0"'
+if needle not in text:
+    raise SystemExit(f"{path} has no version = \"0.0.0\" to rewrite")
+path.write_text(text.replace(needle, f'version = "{version}"', 1))
+PY
+echo "set workspace version to $cargo_version"
 
 printf '%s\n' "$stamp" >"$stamp_file"
 echo "prepared $UPSTREAM_REF with ${#patches[@]} patch(es)"

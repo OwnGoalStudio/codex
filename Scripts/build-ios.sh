@@ -107,6 +107,19 @@ rm -rf -- "$payload"
 mkdir -p "$payload"
 /usr/bin/ditto "$executable" "$payload/$PROGRAM"
 
+# Upstream release profile leaves symbols in the binary on purpose. Strip
+# the payload copy, not cargo's target dir, so a later unsigned rebuild
+# can still symbolicate from the unstripped artifact.
+xcrun --sdk iphoneos strip -xS "$payload/$PROGRAM"
+# strip drops the ad-hoc signature; package-deb.sh re-signs with ldid.
+
+build_version="$(vtool -show-build "$payload/$PROGRAM" 2>/dev/null)"
+grep -qE '^ *platform (IOS|2)$' <<<"$build_version" || {
+    echo "error: stripped $payload/$PROGRAM is no longer an iOS binary" >&2
+    sed 's/^/       /' <<<"$build_version" >&2
+    exit 65
+}
+
 {
     echo "built $PROGRAM: $architectures, iOS $MIN_IOS minimum, $(
         du -h "$payload/$PROGRAM" | cut -f1 | tr -d ' '
