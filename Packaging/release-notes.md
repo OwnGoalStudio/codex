@@ -15,7 +15,7 @@ Requires **iOS @MIN_IOS_MAJOR@ or later** and a bootstrap that provides a shell.
 
 ## Usage
 
-Run `codex` in a terminal on device. Authenticate with ChatGPT or an API key. The browser login uses `uiopen`.
+Run `codex` in a terminal on device. Authenticate with ChatGPT or an API key. The browser login uses `uiopen`. Code Mode uses the packaged native `codex-code-mode-host` sidecar.
 
 ## About this build
 

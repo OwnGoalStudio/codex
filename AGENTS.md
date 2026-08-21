@@ -19,13 +19,20 @@ execute the same code.
 - **One arm64 binary backs both packages.** arm64 runs on every arm64e device
   and the reverse is not true. The two `.deb` architectures name a *bootstrap
   layout*, not a CPU: `iphoneos-arm64` is rootless, `iphoneos-arm64e` is
-  roothide. Never build an arm64e slice for the "arm64e" package.
+  roothide. Never build an arm64e slice for the "arm64e" package. Aggregate
+  release targets must build that payload once, package it twice, and checksum
+  only the two exact current-version outputs; device installation must select
+  the same exact version so stale artifacts cannot leak into either path.
 - **Never hardcode a bootstrap path in patched source.** Probe for the file and
   take the first that exists. Prefix substitution belongs in *packaging*
   (`@PREFIX@`), not in Rust.
 - **Versions live in `Configuration/version.txt` only.** `X.Y.Z` tracks
   upstream's crate version; `X.Y.Z-N` is a packaging-only respin.
 - **Do not link libvroot into this binary.** See below.
+- **Jitless V8 still needs its iOS address-space entitlement.** Sandbox-enabled
+  V8 reserves a large address cage on iOS, so sign the CLI and Code Mode host
+  with `com.apple.developer.kernel.extended-virtual-addressing`; do not add JIT
+  or unsigned-executable-memory entitlements to solve an address-space failure.
 
 ## libvroot is not our problem, and not our solution
 
@@ -49,18 +56,19 @@ we will do. Consequences:
 - A vroot parent shell may export `SHELL=/bin/zsh`. That path is true *inside*
   the parent, and a lie to this process: `is_executable("/bin/zsh")` looks at
   the real rootfs and fails on both bootstraps.
-- Runtime lookup has to probe `/var/jb/bin` and `/var/jb/usr/bin` first. That
-  hits rootless for real, and hits roothide through the compatibility symlink
-  it keeps at `/var/jb`. Unprefixed `/bin` stays in the list for rootful and
-  for a future vroot-linked world we are not in.
+- Runtime lookup first derives RootHide's randomized bootstrap from the
+  executable directory's official `.jbroot` link, then probes `/var/jb/bin`
+  and `/var/jb/usr/bin` for rootless. Unprefixed `/bin` stays in the list for
+  rootful and for a future vroot-linked world we are not in.
 - **Packaging** is still two layouts. roothide dpkg unpacks an unprefixed tree
   into the jbroot it picked this boot; rootless dpkg unpacks under `/var/jb`.
   The architecture field (`iphoneos-arm64e` vs `iphoneos-arm64`) names that
-  layout. Do not infer the layout from `/var/jb` existing — roothide has the
-  symlink too. Ask `dpkg --print-architecture`.
+  layout. Do not assume RootHide exposes `/var/jb`; ask
+  `dpkg --print-architecture` when the installed layout matters.
 
-Do not add `/var/jb` to patched source as "the rootless prefix". It is one
-candidate in a probe list.
+Do not add `/var/jb` to patched source as a universal jailbreak prefix. It is
+one rootless candidate in a probe list; RootHide discovery must use the
+per-Mach-O-directory `.jbroot` contract rather than guessing its random path.
 
 ## Layout
 
@@ -72,7 +80,8 @@ Packaging/DEBIAN/control     control template (@PLACEHOLDER@ substituted)
 Packaging/codex.entitlements  what the signed binary carries, and why
 Packaging/codex.launcher.sh   /usr/bin/codex → the real binary in libexec
 Scripts/prepare-source.sh    fetch + patch (idempotent, stamped)
-Scripts/build-ios.sh         cargo --target aarch64-apple-ios, verify Mach-O
+Scripts/prepare-rusty-v8.sh  fetch matching full recursive V8 source
+Scripts/build-ios.sh         build CLI + Code Mode host, verify both Mach-Os
 Scripts/package-deb.sh       stage + ldid + dpkg-deb + verify
 Scripts/install-device.sh    install over SSH and smoke-test (dev only)
 build/                       everything generated; not source
@@ -95,7 +104,9 @@ binary runs with its entitlements ignored (trustcache never saw it).
 Same as kk: a non-draft, non-prerelease tag `vX.Y.Z`; assets whose names end
 in `iphoneos-arm64.deb` / `iphoneos-arm64e.deb`; a `SHA256SUMS` of bare names.
 
-`Follow upstream` runs daily at 00:00 UTC: pin to the newest stable
+`Follow upstream` runs every Monday at 00:00 UTC: pin to the newest stable
 `openai/codex` `rust-vX.Y.Z` release, `make source` to prove `patches/` still
 apply, then commit and tag `vX.Y.Z` as `bot <bot@owngoal.dev>`. `Release` builds
-that tag. OwnGoalPackages fetches it at 04:00 UTC.
+that tag. A packaging respin `X.Y.Z-N` already tracks upstream `X.Y.Z`, so the
+job advances on a new stable version rather than a different same-version SHA.
+OwnGoalPackages fetches it at 04:00 UTC.

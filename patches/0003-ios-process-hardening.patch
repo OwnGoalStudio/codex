@@ -9,3 +9,4 @@ diff --git a/codex-rs/process-hardening/src/lib.rs b/codex-rs/process-hardening/
      target_os = "freebsd",
      target_os = "netbsd",
      target_os = "openbsd"
+ const SET_RLIMIT_CORE_FAILED_EXIT_CODE: i32 = 7;

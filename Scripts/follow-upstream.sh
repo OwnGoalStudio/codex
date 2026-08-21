@@ -5,7 +5,7 @@
 #
 # Does not build debs or create a GitHub release. The scheduled workflow
 # commits the pin and tags vX.Y.Z; release.yml turns that tag into packages.
-# OwnGoalPackages picks the newest non-preview release the next day.
+# OwnGoalPackages picks up the newest non-preview release on its next run.
 #
 #   Scripts/follow-upstream.sh           # rewrite Configuration/ if newer
 #   Scripts/follow-upstream.sh --check   # exit 0 if already current
@@ -36,11 +36,14 @@ source "$repository_root/Configuration/upstream.env"
 
 : "${UPSTREAM_REPO:?}"
 : "${UPSTREAM_REF:?}"
+: "${RUSTY_V8_REPO:?}"
+: "${RUSTY_V8_REF:?}"
 
 command -v gh >/dev/null || { echo "error: gh is not installed" >&2; exit 69; }
 command -v python3 >/dev/null || { echo "error: python3 is not installed" >&2; exit 69; }
 
 current_version="$(tr -d '[:space:]' <"$repository_root/Configuration/version.txt")"
+current_upstream_version="${current_version%%-*}"
 
 read -r upstream_version upstream_tag <<EOF
 $(python3 - <<'PY'
@@ -88,6 +91,18 @@ fi
 echo "current:  $current_version @ $UPSTREAM_REF"
 echo "upstream: $upstream_version ($upstream_tag) @ $upstream_sha"
 
+version_order="$(python3 - "$upstream_version" "$current_upstream_version" <<'PY'
+import sys
+candidate = tuple(map(int, sys.argv[1].split(".")))
+current = tuple(map(int, sys.argv[2].split(".")))
+print((candidate > current) - (candidate < current))
+PY
+)"
+if (( version_order <= 0 )); then
+    echo "no newer stable version than $current_upstream_version"
+    exit 0
+fi
+
 if [[ "$upstream_sha" == "$UPSTREAM_REF" ]]; then
     echo "already pinned to $upstream_tag"
     exit 0
@@ -126,6 +141,47 @@ echo "set version $upstream_version"
 
 # Cheap validation: fetch + apply patches. Does not cross-compile.
 make -C "$repository_root" source
+
+v8_version="$(awk '
+    $0 == "name = \"v8\"" { in_v8 = 1; next }
+    in_v8 && $1 == "version" { gsub(/\"/, "", $3); print $3; exit }
+' "$repository_root/build/src/codex-rs/Cargo.lock")"
+[[ -n "$v8_version" ]] || {
+    echo "error: prepared Cargo.lock has no v8 package" >&2
+    exit 65
+}
+
+rusty_v8_slug="${RUSTY_V8_REPO#https://github.com/}"
+rusty_v8_slug="${rusty_v8_slug%.git}"
+[[ "$rusty_v8_slug" != "$RUSTY_V8_REPO" && "$rusty_v8_slug" == */* ]] || {
+    echo "error: RUSTY_V8_REPO must be an https://github.com URL" >&2
+    exit 65
+}
+v8_ref_json="$(gh api "repos/$rusty_v8_slug/git/ref/tags/v$v8_version")"
+v8_object_type="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["object"]["type"])' <<<"$v8_ref_json")"
+v8_object_sha="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["object"]["sha"])' <<<"$v8_ref_json")"
+if [[ "$v8_object_type" == "tag" ]]; then
+    rusty_v8_sha="$(gh api "repos/$rusty_v8_slug/git/tags/$v8_object_sha" --jq .object.sha)"
+else
+    rusty_v8_sha="$v8_object_sha"
+fi
+[[ "$rusty_v8_sha" =~ ^[0-9a-f]{40}$ ]] || {
+    echo "error: could not resolve rusty_v8 v$v8_version to a commit" >&2
+    exit 65
+}
+
+python3 - "$repository_root/Configuration/upstream.env" "$rusty_v8_sha" <<'PY'
+from pathlib import Path
+import sys
+path = Path(sys.argv[1])
+sha = sys.argv[2]
+text = path.read_text()
+old = next((line for line in text.splitlines() if line.startswith("RUSTY_V8_REF=")), None)
+if old is None:
+    raise SystemExit(f"{path} has no RUSTY_V8_REF=")
+path.write_text(text.replace(old, f"RUSTY_V8_REF={sha}", 1))
+PY
+echo "updated RUSTY_V8_REF=$rusty_v8_sha for v8 $v8_version"
 
 channel="$(python3 - "$repository_root/build/src/codex-rs/rust-toolchain.toml" <<'PY' || true
 from pathlib import Path

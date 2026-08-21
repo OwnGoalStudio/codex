@@ -32,7 +32,7 @@ jobs:
 
       - name: Select newest Xcode
         run: |
-          latest="$(ls -d /Applications/Xcode*.app | sort -V | tail -n1)"
+          latest="$(find /Applications -maxdepth 1 -type d -name 'Xcode*.app' -print | sort -V | tail -n1)"
           sudo xcode-select -s "$latest/Contents/Developer"
           xcodebuild -version
           xcrun --sdk iphoneos --show-sdk-version

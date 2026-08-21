@@ -2,7 +2,7 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
   codex is a command-line agent: it is launched from a shell, it spawns shells of
-  its own, and it reads and writes the tree it was pointed at. Three
+  its own, and it reads and writes the tree it was pointed at. Four
   entitlements make that work on a jailbroken device:
 
   platform-application
@@ -17,6 +17,11 @@
       whoever ran it (~/.codex) instead of a per-binary container the next
       install would orphan. Absence is not equivalent: the switch has to be
       explicitly false.
+
+  com.apple.developer.kernel.extended-virtual-addressing
+      Lets sandbox-enabled V8 reserve its iOS address cage. The iOS V8 build is
+      jitless, so executable-memory/JIT entitlements are neither needed nor
+      requested.
 -->
 <plist version="1.0">
 <dict>
@@ -26,5 +31,7 @@
 	<true/>
 	<key>com.apple.private.security.container-required</key>
 	<false/>
+	<key>com.apple.developer.kernel.extended-virtual-addressing</key>
+	<true/>
 </dict>
 </plist>

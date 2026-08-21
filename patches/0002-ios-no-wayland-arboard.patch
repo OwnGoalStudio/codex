@@ -10,3 +10,21 @@ diff --git a/codex-rs/Cargo.toml b/codex-rs/Cargo.toml
  arc-swap = "1.9.0"
  assert_cmd = "2"
  assert_matches = "1.5.0"
+diff --git a/codex-rs/tui/Cargo.toml b/codex-rs/tui/Cargo.toml
+--- a/codex-rs/tui/Cargo.toml
++++ b/codex-rs/tui/Cargo.toml
+@@ -144,7 +144,10 @@
+ # Clipboard support via `arboard` is not available on Android/Termux.
+-# Only include it for non-Android targets so the crate builds on Android.
+-[target.'cfg(not(target_os = "android"))'.dependencies]
++# Only include it for non-Android targets so the crate builds on Android. The
++# Wayland data-control backend is Linux-only and does not compile for iOS.
++[target.'cfg(not(any(target_os = "android", target_os = "linux")))'.dependencies]
+ arboard = { workspace = true }
+-
+-
++
++[target.'cfg(target_os = "linux")'.dependencies]
++arboard = { workspace = true, features = ["wayland-data-control"] }
++
+ [dev-dependencies]

@@ -27,6 +27,7 @@ source "$repository_root/Configuration/upstream.env"
 : "${MIN_IOS:?}"
 : "${UPSTREAM_REF:?}"
 : "${CARGO_BIN:?}"
+: "${CODE_MODE_HOST_BIN:?}"
 
 package_id="${PACKAGE_ID:-wiki.qaq.codex}"
 control_template="$repository_root/Packaging/DEBIAN/control"
@@ -40,6 +41,10 @@ done
 
 [[ -d "$payload" ]] || { echo "error: no payload directory at $payload" >&2; exit 66; }
 [[ -f "$payload/$PROGRAM" ]] || { echo "error: payload has no $PROGRAM" >&2; exit 66; }
+[[ -f "$payload/$CODE_MODE_HOST_BIN" ]] || {
+    echo "error: payload has no $CODE_MODE_HOST_BIN" >&2
+    exit 66
+}
 
 [[ "$output_deb" == *.deb ]] || { echo "error: output must end in .deb" >&2; exit 64; }
 [[ "$package_id" =~ ^[a-z0-9][a-z0-9+.-]+$ ]] || { echo "error: invalid package id" >&2; exit 64; }
@@ -51,10 +56,12 @@ for tool in ldid dpkg-deb; do
     command -v "$tool" >/dev/null || { echo "error: $tool is not installed" >&2; exit 69; }
 done
 
-vtool -show-build "$payload/$PROGRAM" 2>/dev/null | grep -qE '^ *platform (IOS|2)$' || {
-    echo "error: $payload/$PROGRAM is not an iOS binary" >&2
-    exit 65
-}
+for binary in "$payload/$PROGRAM" "$payload/$CODE_MODE_HOST_BIN"; do
+    vtool -show-build "$binary" 2>/dev/null | grep -qE '^ *platform (IOS|2)$' || {
+        echo "error: $binary is not an iOS binary" >&2
+        exit 65
+    }
+done
 
 output_name="$(basename "$output_deb")"
 mkdir -p "$(dirname "$output_deb")"
@@ -63,7 +70,7 @@ output_deb="$output_directory/$output_name"
 
 staging="$(mktemp -d "${TMPDIR:-/tmp}/${PROGRAM}-deb.XXXXXX")"
 temporary_deb="$output_directory/.$output_name.tmp.$$"
-signed_entitlements="$(mktemp "${TMPDIR:-/tmp}/${PROGRAM}-entitlements.XXXXXX.plist")"
+signed_entitlements="$(mktemp "${TMPDIR:-/tmp}/${PROGRAM}-entitlements.XXXXXX")"
 trap 'rm -rf -- "$staging"; rm -f -- "$temporary_deb" "$signed_entitlements"' EXIT
 chmod 0755 "$staging"
 
@@ -79,7 +86,10 @@ sed -e "s|@PREFIX@|$install_prefix|g" "$launcher_template" >"$installed_launcher
 /usr/bin/ditto "$system_config" "$installed_system_config"
 chmod 0644 "$installed_system_config"
 
-chmod 0755 "$installed_launcher" "$installed_libexec/$PROGRAM"
+chmod 0755 \
+    "$installed_launcher" \
+    "$installed_libexec/$PROGRAM" \
+    "$installed_libexec/$CODE_MODE_HOST_BIN"
 chmod -R a+rX "$installed_libexec"
 
 head -n1 "$installed_launcher" | grep -qxF "#!$install_prefix/bin/sh" || {
@@ -94,8 +104,17 @@ if grep -q '@PREFIX@' "$installed_launcher"; then
     echo "error: launcher still holds an unsubstituted @PREFIX@" >&2
     exit 65
 fi
+if [[ -z "$install_prefix" ]] &&
+    ! grep -qF '_codex_ca="$(jbroot "$_codex_ca")"' "$installed_launcher"; then
+    echo "error: roothide launcher does not convert the CA path with jbroot" >&2
+    exit 65
+fi
 
-ldid -S"$entitlements" -Cadhoc "$installed_libexec/$PROGRAM"
+for binary in \
+    "$installed_libexec/$PROGRAM" \
+    "$installed_libexec/$CODE_MODE_HOST_BIN"; do
+    ldid -S"$entitlements" -Cadhoc "$binary"
+done
 shopt -s nullglob
 for library in "$installed_libexec"/*.dylib; do
     ldid -S -Cadhoc "$library"
@@ -103,21 +122,25 @@ for library in "$installed_libexec"/*.dylib; do
 done
 shopt -u nullglob
 
-ldid -e "$installed_libexec/$PROGRAM" >"$signed_entitlements"
-
 require_true() {
     [[ "$(/usr/libexec/PlistBuddy -c "Print :$1" "$signed_entitlements" 2>/dev/null || true)" == true ]] || {
         echo "error: signed binary is missing entitlement: $1" >&2
         exit 65
     }
 }
-require_true platform-application
-require_true com.apple.private.security.no-sandbox
-[[ "$(/usr/libexec/PlistBuddy -c 'Print :com.apple.private.security.container-required' \
-    "$signed_entitlements" 2>/dev/null || true)" == false ]] || {
-    echo "error: signed binary needs com.apple.private.security.container-required = false" >&2
-    exit 65
-}
+for binary in \
+    "$installed_libexec/$PROGRAM" \
+    "$installed_libexec/$CODE_MODE_HOST_BIN"; do
+    ldid -e "$binary" >"$signed_entitlements"
+    require_true platform-application
+    require_true com.apple.private.security.no-sandbox
+    require_true com.apple.developer.kernel.extended-virtual-addressing
+    [[ "$(/usr/libexec/PlistBuddy -c 'Print :com.apple.private.security.container-required' \
+        "$signed_entitlements" 2>/dev/null || true)" == false ]] || {
+        echo "error: $binary needs com.apple.private.security.container-required = false" >&2
+        exit 65
+    }
+done
 
 installed_size="$(du -sk "$installed_root" | awk '{print $1}')"
 upstream_label="${UPSTREAM_REPO##*/}@${UPSTREAM_REF:0:12}"
@@ -145,6 +168,7 @@ contents="$(dpkg-deb --contents "$temporary_deb")"
 for path in \
     "$install_prefix/usr/bin/$PROGRAM" \
     "$install_prefix/usr/libexec/$PROGRAM/$PROGRAM" \
+    "$install_prefix/usr/libexec/$PROGRAM/$CODE_MODE_HOST_BIN" \
     "$install_prefix/etc/codex/config.toml"; do
     grep -qF ".$path" <<<"$contents" || {
         echo "error: package is missing $path" >&2

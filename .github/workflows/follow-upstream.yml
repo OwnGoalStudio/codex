@@ -1,4 +1,4 @@
-# Once a day, pin to the newest stable openai/codex rust-vX.Y.Z release.
+# Once a week, pin to the newest stable openai/codex rust-vX.Y.Z release.
 # If the pin moves and patches/ still apply, commit and tag vX.Y.Z.
 # release.yml builds that tag; OwnGoalPackages picks it up at 04:00 UTC.
 
@@ -6,8 +6,8 @@ name: Follow upstream
 
 on:
   schedule:
-    # Ahead of OwnGoalPackages' 04:00 UTC fetch, so the Release has time to build.
-    - cron: "0 0 * * *"
+    # Monday 00:00 UTC, ahead of OwnGoalPackages' 04:00 UTC fetch.
+    - cron: "0 0 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -37,10 +37,18 @@ jobs:
           chmod +x Scripts/follow-upstream.sh
           read -r new_version new_ref new_tag <<<"$(./Scripts/follow-upstream.sh --print)"
           current_ref="$(make --no-print-directory print-upstream)"
-          echo "current $current_ref"
+          current_version="$(make --no-print-directory print-version)"
+          current_upstream_version="${current_version%%-*}"
+          echo "current $current_version @ $current_ref"
           echo "latest  $new_version ($new_tag) @ $new_ref"
-          if [[ "$new_ref" == "$current_ref" ]]; then
-            echo "already pinned"
+          if python3 - "$new_version" "$current_upstream_version" <<'PY'
+          import sys
+          candidate = tuple(map(int, sys.argv[1].split(".")))
+          current = tuple(map(int, sys.argv[2].split(".")))
+          raise SystemExit(candidate > current)
+          PY
+          then
+            echo "no newer stable version than $current_upstream_version"
             echo "changed=false" >>"$GITHUB_ENV"
             exit 0
           fi
@@ -50,9 +58,11 @@ jobs:
             exit 0
           fi
           ./Scripts/follow-upstream.sh
-          echo "changed=true" >>"$GITHUB_ENV"
-          echo "new_version=${new_version}" >>"$GITHUB_ENV"
-          echo "new_ref=${new_ref}" >>"$GITHUB_ENV"
+          {
+            echo "changed=true"
+            echo "new_version=${new_version}"
+            echo "new_ref=${new_ref}"
+          } >>"$GITHUB_ENV"
 
       - name: Commit pin and tag
         if: env.changed == 'true'

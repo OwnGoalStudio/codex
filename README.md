@@ -26,7 +26,10 @@ in a terminal on device.
 
 Packaging, not a fork. There is no application source here: the build fetches
 openai/codex at a pinned commit, applies the patches in `patches/`,
-cross-compiles for `aarch64-apple-ios`, and produces the two packages.
+cross-compiles the CLI and its real `codex-code-mode-host` sidecar for
+`aarch64-apple-ios`, and produces the two packages. V8 is built jitless from
+the matching pinned `rusty_v8` source; no Direct fallback or placeholder host
+is substituted.
 
 The Rust binary is **not** linked with RootHide's libvroot. C tools in the
 bootstrap (git, bash) can keep writing `/bin/sh` on roothide because vroot
