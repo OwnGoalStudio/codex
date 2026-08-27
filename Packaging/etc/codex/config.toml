@@ -29,3 +29,10 @@ computer_use = false
 # Remote plugin marketplace pulls a large cache of desktop skills.
 # Local plugins/skills in $CODEX_HOME still work.
 remote_plugin = false
+
+# Embedded sample system skills (imagegen, openai-docs, plugin-creator,
+# review-agent, skill-creator, skill-installer) are extracted into
+# $CODEX_HOME/skills/.system on startup when this is on. Keep them off so
+# they cannot add open-file load. User skills in $CODEX_HOME still work.
+[skills.bundled]
+enabled = false

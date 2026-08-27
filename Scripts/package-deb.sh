@@ -34,8 +34,9 @@ control_template="$repository_root/Packaging/DEBIAN/control"
 entitlements="$repository_root/Packaging/${PROGRAM}.entitlements"
 launcher_template="$repository_root/Packaging/${PROGRAM}.launcher.sh"
 system_config="$repository_root/Packaging/etc/codex/config.toml"
+skill_policy_check="$repository_root/Scripts/check-skill-policy.sh"
 
-for input in "$control_template" "$entitlements" "$launcher_template" "$system_config"; do
+for input in "$control_template" "$entitlements" "$launcher_template" "$system_config" "$skill_policy_check"; do
     [[ -f "$input" ]] || { echo "error: missing packaging input: $input" >&2; exit 66; }
 done
 
@@ -175,6 +176,12 @@ for path in \
         exit 65
     }
 done
+if grep -q 'SKILL.md' <<<"$contents"; then
+    echo "error: package contains extra skill trees (SKILL.md)" >&2
+    grep 'SKILL.md' <<<"$contents" | sed 's/^/       /' >&2
+    exit 65
+fi
+"$skill_policy_check" --config "$installed_system_config" --tree "$installed_root" --payload "$payload"
 
 mv -f "$temporary_deb" "$output_deb"
 echo "packaged $package_id $version ($architecture, prefix '${install_prefix:-/}'): $output_deb"

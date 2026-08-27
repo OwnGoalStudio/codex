@@ -114,11 +114,15 @@ check:
 	@echo "==> packaging inputs"
 	@for input in Packaging/DEBIAN/control Packaging/codex.entitlements \
 		Packaging/codex.launcher.sh Packaging/release-notes.md \
-		Packaging/etc/codex/config.toml; do \
+		Packaging/etc/codex/config.toml Scripts/check-skill-policy.sh; do \
 		test -f "$(ROOT_DIR)/$$input" || { echo "error: missing $$input" >&2; exit 66; }; \
 	done
 	@plutil -lint "$(ROOT_DIR)/Packaging/codex.entitlements"
 	@"$(ROOT_DIR)/Scripts/release-notes.sh" "v$(PACKAGE_VERSION)" >/dev/null
+	@echo "==> skill policy"
+	@bash -n "$(ROOT_DIR)/Scripts/check-skill-policy.sh"
+	@"$(ROOT_DIR)/Scripts/check-skill-policy.sh" --self-test \
+		--config "$(ROOT_DIR)/Packaging/etc/codex/config.toml"
 	@echo "ok"
 
 source:
