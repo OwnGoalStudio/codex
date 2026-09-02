@@ -114,7 +114,10 @@ build/                       everything generated; not source
   the `0.0.0` placeholder; `prepare-source.sh` accepts either and refuses any
   other value as a pin/version mismatch.
 - `make build` — cross-compile and verify the Mach-O is iOS
-- `make debs` — both packages plus `SHA256SUMS`; what CI releases
+- `make debs` — both packages plus `SHA256SUMS`; what CI releases. On the
+  macOS runner this takes 2 to 4 hours because V8 is built from source; the
+  Release job timeout is 360 minutes, GitHub's ceiling. A run that shows
+  `cancelled` at exactly the timeout was killed, not broken.
 - `make install` — install on an attached device and run `--version`.
   Over USB: `iproxy 4422:2222 &`
 

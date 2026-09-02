@@ -24,7 +24,9 @@ concurrency:
 jobs:
   deb:
     runs-on: macos-26
-    timeout-minutes: 180
+    # V8 is built from source for the Code Mode host; 0.152.1 needed more
+    # than the 180 minutes earlier releases fit in. 360 is GitHub's ceiling.
+    timeout-minutes: 360
 
     steps:
       - name: Check out codex
