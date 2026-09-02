@@ -29,6 +29,15 @@ execute the same code.
 - **Versions live in `Configuration/version.txt` only.** `X.Y.Z` tracks
   upstream's crate version; `X.Y.Z-N` is a packaging-only respin.
 - **Do not link libvroot into this binary.** See below.
+- **`CLAUDE.md` is a symlink to `AGENTS.md`**, never a file of its own. One
+  set of notes, two names; `make check` enforces it.
+- **Review for sensitive information before anything is uploaded or
+  published.** `Scripts/check-sensitive.sh` scans tracked files, the staged
+  package tree and the finished `.deb`s for credentials, private keys, home
+  and scratch paths, device identifiers, IP addresses and e-mail addresses.
+  `make check`, `package-deb.sh` and the Release workflow all run it and
+  stop on a hit. A deliberate public value goes on its allowlist; a rule is
+  never loosened.
 - **Jitless V8 still needs its iOS address-space entitlement.** Sandbox-enabled
   V8 reserves a large address cage on iOS, so sign the CLI and Code Mode host
   with `com.apple.developer.kernel.extended-virtual-addressing`; do not add JIT

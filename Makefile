@@ -123,6 +123,10 @@ check:
 	@bash -n "$(ROOT_DIR)/Scripts/check-skill-policy.sh"
 	@"$(ROOT_DIR)/Scripts/check-skill-policy.sh" --self-test \
 		--config "$(ROOT_DIR)/Packaging/etc/codex/config.toml"
+	@test -L "$(ROOT_DIR)/CLAUDE.md" && [[ "$$(readlink "$(ROOT_DIR)/CLAUDE.md")" == AGENTS.md ]] || \
+		{ echo "error: CLAUDE.md must be a symlink to AGENTS.md" >&2; exit 65; }
+	@echo "==> sensitive information"
+	@"$(ROOT_DIR)/Scripts/check-sensitive.sh"
 	@echo "ok"
 
 source:
