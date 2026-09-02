@@ -1,7 +1,7 @@
 # codex — OpenAI Codex CLI packaged for jailbroken iOS.
 #
 # Every step is a script under Scripts/ so the GitHub Actions workflow and a
-# local checkout run the same code. This Makefile only wires them together and
+# local checkout run the same code. This makefile only wires them together and
 # owns the one thing that differs between the two packages: the layout.
 
 SHELL := /bin/bash
