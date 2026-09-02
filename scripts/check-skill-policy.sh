@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Fail if a Codex staging tree, payload, or shipped system config would install
-# extra skill trees. Used by make check and Scripts/package-deb.sh.
+# extra skill trees. Used by make check and scripts/package-deb.sh.
 
 set -Eeuo pipefail
 

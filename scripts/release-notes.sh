@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Render Packaging/release-notes.md for one tag, on stdout.
+# Render packaging/release-notes.md for one tag, on stdout.
 
 set -Eeuo pipefail
 
@@ -11,17 +11,17 @@ fi
 
 tag="$1"
 repository_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
-template="$repository_root/Packaging/release-notes.md"
+template="$repository_root/packaging/release-notes.md"
 
-# shellcheck source=../Configuration/upstream.env
-source "$repository_root/Configuration/upstream.env"
+# shellcheck source=../configuration/upstream.env
+source "$repository_root/configuration/upstream.env"
 
 : "${UPSTREAM_REF:?}"
 : "${MIN_IOS:?}"
 
 [[ -f "$template" ]] || { echo "error: missing $template" >&2; exit 66; }
 
-version="$(cat "$repository_root/Configuration/version.txt")"
+version="$(cat "$repository_root/configuration/version.txt")"
 version="${version//[[:space:]]/}"
 package_id="${PACKAGE_ID:-wiki.qaq.codex}"
 

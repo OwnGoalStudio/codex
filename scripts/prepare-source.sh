@@ -17,11 +17,11 @@ work_dir="$1"
 repository_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 patch_dir="$repository_root/patches"
 
-# shellcheck source=../Configuration/upstream.env
-source "$repository_root/Configuration/upstream.env"
+# shellcheck source=../configuration/upstream.env
+source "$repository_root/configuration/upstream.env"
 
-: "${UPSTREAM_REPO:?Configuration/upstream.env must set UPSTREAM_REPO}"
-: "${UPSTREAM_REF:?Configuration/upstream.env must set UPSTREAM_REF}"
+: "${UPSTREAM_REPO:?configuration/upstream.env must set UPSTREAM_REPO}"
+: "${UPSTREAM_REF:?configuration/upstream.env must set UPSTREAM_REF}"
 
 [[ -d "$patch_dir" ]] || { echo "error: missing patches directory: $patch_dir" >&2; exit 66; }
 
@@ -30,7 +30,7 @@ patches=("$patch_dir"/*.patch)
 shopt -u nullglob
 ((${#patches[@]} > 0)) || { echo "error: patches/ holds no .patch files" >&2; exit 66; }
 
-version_file="$repository_root/Configuration/version.txt"
+version_file="$repository_root/configuration/version.txt"
 package_version="$(tr -d '[:space:]' <"$version_file")"
 cargo_version="${package_version%%-*}"
 [[ "$cargo_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
@@ -80,7 +80,7 @@ done
 
 # Official releases rewrite the workspace 0.0.0 at tag time. Do the same so
 # `codex --version` matches the package, not the in-tree placeholder.
-: "${CARGO_DIR:?Configuration/upstream.env must set CARGO_DIR}"
+: "${CARGO_DIR:?configuration/upstream.env must set CARGO_DIR}"
 workspace_toml="$work_dir/$CARGO_DIR/Cargo.toml"
 [[ -f "$workspace_toml" ]] || {
     echo "error: missing workspace Cargo.toml at $workspace_toml" >&2

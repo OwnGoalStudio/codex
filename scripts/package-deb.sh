@@ -20,8 +20,8 @@ install_prefix="$5"
 
 repository_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 
-# shellcheck source=../Configuration/upstream.env
-source "$repository_root/Configuration/upstream.env"
+# shellcheck source=../configuration/upstream.env
+source "$repository_root/configuration/upstream.env"
 
 : "${PROGRAM:?}"
 : "${MIN_IOS:?}"
@@ -30,11 +30,11 @@ source "$repository_root/Configuration/upstream.env"
 : "${CODE_MODE_HOST_BIN:?}"
 
 package_id="${PACKAGE_ID:-wiki.qaq.codex}"
-control_template="$repository_root/Packaging/DEBIAN/control"
-entitlements="$repository_root/Packaging/${PROGRAM}.entitlements"
-launcher_template="$repository_root/Packaging/${PROGRAM}.launcher.sh"
-system_config="$repository_root/Packaging/etc/codex/config.toml"
-skill_policy_check="$repository_root/Scripts/check-skill-policy.sh"
+control_template="$repository_root/packaging/DEBIAN/control"
+entitlements="$repository_root/packaging/${PROGRAM}.entitlements"
+launcher_template="$repository_root/packaging/${PROGRAM}.launcher.sh"
+system_config="$repository_root/packaging/etc/codex/config.toml"
+skill_policy_check="$repository_root/scripts/check-skill-policy.sh"
 
 for input in "$control_template" "$entitlements" "$launcher_template" "$system_config" "$skill_policy_check"; do
     [[ -f "$input" ]] || { echo "error: missing packaging input: $input" >&2; exit 66; }
@@ -161,7 +161,7 @@ if grep -q '@[A-Z_]*@' "$debian/control"; then
 fi
 
 # Nothing personal or secret leaves this machine inside a package.
-"$repository_root/Scripts/check-sensitive.sh" "$staging"
+"$repository_root/scripts/check-sensitive.sh" "$staging"
 
 dpkg-deb --root-owner-group -Zzstd -b "$staging" "$temporary_deb" >/dev/null
 

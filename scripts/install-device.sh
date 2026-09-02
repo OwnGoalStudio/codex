@@ -23,12 +23,12 @@ device_user="${DEVICE_USER:-mobile}"
 sudo_password="${DEVICE_SUDO_PASSWORD:-}"
 
 repository_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
-# shellcheck source=../Configuration/upstream.env
-source "$repository_root/Configuration/upstream.env"
+# shellcheck source=../configuration/upstream.env
+source "$repository_root/configuration/upstream.env"
 : "${PROGRAM:?}"
 : "${CODE_MODE_HOST_BIN:?}"
 package_id_expected="${PACKAGE_ID:-wiki.qaq.codex}"
-package_version_expected="$(tr -d '[:space:]' <"$repository_root/Configuration/version.txt")"
+package_version_expected="$(tr -d '[:space:]' <"$repository_root/configuration/version.txt")"
 
 ssh_options=(
     -o BatchMode=yes

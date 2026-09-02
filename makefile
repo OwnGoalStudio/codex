@@ -1,13 +1,13 @@
 # codex — OpenAI Codex CLI packaged for jailbroken iOS.
 #
-# Every step is a script under Scripts/ so the GitHub Actions workflow and a
+# Every step is a script under scripts/ so the GitHub Actions workflow and a
 # local checkout run the same code. This makefile only wires them together and
 # owns the one thing that differs between the two packages: the layout.
 
 SHELL := /bin/bash
 ROOT_DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 
-CONFIG_DIR := $(ROOT_DIR)/Configuration
+CONFIG_DIR := $(ROOT_DIR)/configuration
 include $(CONFIG_DIR)/upstream.env
 
 VERSION_FILE    := $(CONFIG_DIR)/version.txt
@@ -20,11 +20,11 @@ SCRATCH_DIR   := $(BUILD_DIR)/ios-$(ARCH)
 BIN_PATH_FILE := $(BUILD_DIR)/bin-path.txt
 PKG_DIR       := $(BUILD_DIR)/Packages
 
-SOURCE_PREPARER  := $(ROOT_DIR)/Scripts/prepare-source.sh
-IOS_BUILDER      := $(ROOT_DIR)/Scripts/build-ios.sh
-DEB_PACKAGER     := $(ROOT_DIR)/Scripts/package-deb.sh
-VERSION_APPLIER  := $(ROOT_DIR)/Scripts/apply-version.sh
-DEVICE_INSTALLER := $(ROOT_DIR)/Scripts/install-device.sh
+SOURCE_PREPARER  := $(ROOT_DIR)/scripts/prepare-source.sh
+IOS_BUILDER      := $(ROOT_DIR)/scripts/build-ios.sh
+DEB_PACKAGER     := $(ROOT_DIR)/scripts/package-deb.sh
+VERSION_APPLIER  := $(ROOT_DIR)/scripts/apply-version.sh
+DEVICE_INSTALLER := $(ROOT_DIR)/scripts/install-device.sh
 
 # Which bootstrap layout the .deb is for. roothide is relocated into the jbroot
 # it picked this boot and its *C* bootstrap programs resolve unprefixed paths
@@ -91,9 +91,9 @@ set-version:
 
 check:
 	@echo "==> shell syntax"
-	@for script in "$(ROOT_DIR)"/Scripts/*.sh; do bash -n "$$script" || exit 1; done
+	@for script in "$(ROOT_DIR)"/scripts/*.sh; do bash -n "$$script" || exit 1; done
 	@if command -v shellcheck >/dev/null; then \
-		shellcheck --severity=warning "$(ROOT_DIR)"/Scripts/*.sh; \
+		shellcheck --severity=warning "$(ROOT_DIR)"/scripts/*.sh; \
 	else \
 		echo "    (shellcheck not installed; syntax check only)"; \
 	fi
@@ -112,21 +112,21 @@ check:
 		test -s "$$patch" || { echo "error: $$patch is empty" >&2; exit 65; }; \
 	done
 	@echo "==> packaging inputs"
-	@for input in Packaging/DEBIAN/control Packaging/codex.entitlements \
-		Packaging/codex.launcher.sh Packaging/release-notes.md \
-		Packaging/etc/codex/config.toml Scripts/check-skill-policy.sh; do \
+	@for input in packaging/DEBIAN/control packaging/codex.entitlements \
+		packaging/codex.launcher.sh packaging/release-notes.md \
+		packaging/etc/codex/config.toml scripts/check-skill-policy.sh; do \
 		test -f "$(ROOT_DIR)/$$input" || { echo "error: missing $$input" >&2; exit 66; }; \
 	done
-	@plutil -lint "$(ROOT_DIR)/Packaging/codex.entitlements"
-	@"$(ROOT_DIR)/Scripts/release-notes.sh" "v$(PACKAGE_VERSION)" >/dev/null
+	@plutil -lint "$(ROOT_DIR)/packaging/codex.entitlements"
+	@"$(ROOT_DIR)/scripts/release-notes.sh" "v$(PACKAGE_VERSION)" >/dev/null
 	@echo "==> skill policy"
-	@bash -n "$(ROOT_DIR)/Scripts/check-skill-policy.sh"
-	@"$(ROOT_DIR)/Scripts/check-skill-policy.sh" --self-test \
-		--config "$(ROOT_DIR)/Packaging/etc/codex/config.toml"
+	@bash -n "$(ROOT_DIR)/scripts/check-skill-policy.sh"
+	@"$(ROOT_DIR)/scripts/check-skill-policy.sh" --self-test \
+		--config "$(ROOT_DIR)/packaging/etc/codex/config.toml"
 	@test -L "$(ROOT_DIR)/CLAUDE.md" && [[ "$$(readlink "$(ROOT_DIR)/CLAUDE.md")" == AGENTS.md ]] || \
 		{ echo "error: CLAUDE.md must be a symlink to AGENTS.md" >&2; exit 65; }
 	@echo "==> sensitive information"
-	@"$(ROOT_DIR)/Scripts/check-sensitive.sh"
+	@"$(ROOT_DIR)/scripts/check-sensitive.sh"
 	@echo "ok"
 
 source:
@@ -174,7 +174,7 @@ bump-upstream:
 	@$(MAKE) --no-print-directory build
 
 follow-upstream:
-	@"$(ROOT_DIR)/Scripts/follow-upstream.sh"
+	@"$(ROOT_DIR)/scripts/follow-upstream.sh"
 
 clean:
 	rm -rf "$(BUILD_DIR)"

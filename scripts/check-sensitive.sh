@@ -2,8 +2,8 @@
 #
 # Refuse to publish anything that carries sensitive information.
 #
-#   Scripts/check-sensitive.sh                 # every git-tracked file
-#   Scripts/check-sensitive.sh <dir-or-file>…  # a staging tree, a payload, a .deb
+#   scripts/check-sensitive.sh                 # every git-tracked file
+#   scripts/check-sensitive.sh <dir-or-file>…  # a staging tree, a payload, a .deb
 #
 # Looks for credentials, private keys, personal home paths, device identifiers,
 # non-loopback IP addresses and e-mail addresses outside the project's public
@@ -116,7 +116,7 @@ findings="$(printf '%s' "$findings" | sed '/^$/d')"
 if [[ -n "$findings" ]]; then
     echo "error: sensitive information found; not publishing:" >&2
     sed 's/^/       /' <<<"$findings" >&2
-    echo "       (add a deliberate public value to the allowlist in Scripts/check-sensitive.sh)" >&2
+    echo "       (add a deliberate public value to the allowlist in scripts/check-sensitive.sh)" >&2
     exit 65
 fi
 echo "sensitive-information review: clean"

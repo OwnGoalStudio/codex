@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Write the package version to Configuration/version.txt.
+# Write the package version to configuration/version.txt.
 # Accepts a release tag as well as a bare version, because CI hands it
 # "$GITHUB_REF_NAME" straight from a v-prefixed tag.
 
@@ -18,5 +18,5 @@ version="${1#v}"
 }
 
 repository_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
-printf '%s\n' "$version" >"$repository_root/Configuration/version.txt"
+printf '%s\n' "$version" >"$repository_root/configuration/version.txt"
 echo "version is now $version"

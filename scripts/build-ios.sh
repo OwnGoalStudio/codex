@@ -17,8 +17,8 @@ src_dir="$1"
 scratch_dir="$2"
 repository_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 
-# shellcheck source=../Configuration/upstream.env
-source "$repository_root/Configuration/upstream.env"
+# shellcheck source=../configuration/upstream.env
+source "$repository_root/configuration/upstream.env"
 
 : "${CARGO_DIR:?}"
 : "${CARGO_PACKAGE:?}"
@@ -32,7 +32,7 @@ source "$repository_root/Configuration/upstream.env"
 
 cargo_root="$src_dir/$CARGO_DIR"
 [[ -f "$cargo_root/Cargo.toml" ]] || {
-    echo "error: $cargo_root is not a prepared Cargo tree (run Scripts/prepare-source.sh)" >&2
+    echo "error: $cargo_root is not a prepared Cargo tree (run scripts/prepare-source.sh)" >&2
     exit 66
 }
 
@@ -67,7 +67,7 @@ export CARGO_HOME="$cargo_home"
 export CARGO_TARGET_DIR="$scratch_dir/target"
 
 rusty_v8_root="$scratch_dir/rusty-v8"
-"$repository_root/Scripts/prepare-rusty-v8.sh" "$rusty_v8_root" >&2
+"$repository_root/scripts/prepare-rusty-v8.sh" "$rusty_v8_root" >&2
 
 locked_v8_version="$(awk '
     $0 == "name = \"v8\"" { in_v8 = 1; next }

@@ -14,8 +14,8 @@ fi
 work_dir="$1"
 repository_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 
-# shellcheck source=../Configuration/upstream.env
-source "$repository_root/Configuration/upstream.env"
+# shellcheck source=../configuration/upstream.env
+source "$repository_root/configuration/upstream.env"
 
 : "${RUSTY_V8_REPO:?}"
 : "${RUSTY_V8_REF:?}"
