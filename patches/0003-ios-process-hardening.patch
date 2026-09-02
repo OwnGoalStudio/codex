@@ -1,7 +1,7 @@
 diff --git a/codex-rs/process-hardening/src/lib.rs b/codex-rs/process-hardening/src/lib.rs
 --- a/codex-rs/process-hardening/src/lib.rs
 +++ b/codex-rs/process-hardening/src/lib.rs
-@@ -34,6 +34,7 @@
+@@ -34,6 +34,7 @@ const PTRACE_DENY_ATTACH_FAILED_EXIT_CODE: i32 = 6;
      target_os = "linux",
      target_os = "android",
      target_os = "macos",
@@ -9,4 +9,3 @@ diff --git a/codex-rs/process-hardening/src/lib.rs b/codex-rs/process-hardening/
      target_os = "freebsd",
      target_os = "netbsd",
      target_os = "openbsd"
- const SET_RLIMIT_CORE_FAILED_EXIT_CODE: i32 = 7;

@@ -1,7 +1,7 @@
 diff --git a/codex-rs/config/src/loader/mod.rs b/codex-rs/config/src/loader/mod.rs
 --- a/codex-rs/config/src/loader/mod.rs
 +++ b/codex-rs/config/src/loader/mod.rs
-@@ -789,6 +789,25 @@
+@@ -799,6 +799,25 @@ fn has_local_managed_configuration_with_system_requirements_path(
  
  #[cfg(unix)]
  pub fn system_config_toml_file() -> io::Result<AbsolutePathBuf> {

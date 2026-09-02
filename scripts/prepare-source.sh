@@ -78,8 +78,10 @@ for patch in "${patches[@]}"; do
     fi
 done
 
-# Official releases rewrite the workspace 0.0.0 at tag time. Do the same so
-# `codex --version` matches the package, not the in-tree placeholder.
+# Older upstream trees carry a 0.0.0 placeholder that official releases
+# rewrite at tag time; newer ones commit the real version. Either way
+# `codex --version` must match the package, and any other value means the
+# pin and configuration/version.txt disagree.
 : "${CARGO_DIR:?configuration/upstream.env must set CARGO_DIR}"
 workspace_toml="$work_dir/$CARGO_DIR/Cargo.toml"
 [[ -f "$workspace_toml" ]] || {
@@ -88,14 +90,19 @@ workspace_toml="$work_dir/$CARGO_DIR/Cargo.toml"
 }
 python3 - "$workspace_toml" "$cargo_version" <<'PY'
 from pathlib import Path
+import re
 import sys
 path = Path(sys.argv[1])
 version = sys.argv[2]
 text = path.read_text()
-needle = 'version = "0.0.0"'
-if needle not in text:
-    raise SystemExit(f"{path} has no version = \"0.0.0\" to rewrite")
-path.write_text(text.replace(needle, f'version = "{version}"', 1))
+match = re.search(r'^\[workspace\.package\]\n(?:[^\[].*\n)*?version = "([^"]+)"', text, re.M)
+if not match:
+    raise SystemExit(f"{path} has no [workspace.package] version to rewrite")
+found = match.group(1)
+if found not in ("0.0.0", version):
+    raise SystemExit(f"{path} is version {found}, but configuration pins {version}")
+start, end = match.span(1)
+path.write_text(text[:start] + version + text[end:])
 PY
 echo "set workspace version to $cargo_version"
 

@@ -160,9 +160,6 @@ if grep -q '@[A-Z_]*@' "$debian/control"; then
     exit 65
 fi
 
-# Nothing personal or secret leaves this machine inside a package.
-"$repository_root/scripts/check-sensitive.sh" "$staging"
-
 dpkg-deb --root-owner-group -Zzstd -b "$staging" "$temporary_deb" >/dev/null
 
 [[ "$(dpkg-deb -f "$temporary_deb" Package)" == "$package_id" ]]

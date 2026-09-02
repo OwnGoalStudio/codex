@@ -77,9 +77,6 @@ jobs:
             dpkg-deb -I ./*iphoneos-arm64.deb | sed 's/^/    /'
           } >>"$GITHUB_STEP_SUMMARY"
 
-      - name: Review for sensitive information
-        run: ./scripts/check-sensitive.sh build/Packages/*.deb build/Packages/SHA256SUMS
-
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:

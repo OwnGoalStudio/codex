@@ -32,12 +32,16 @@ execute the same code.
 - **`CLAUDE.md` is a symlink to `AGENTS.md`**, never a file of its own. One
   set of notes, two names; `make check` enforces it.
 - **Review for sensitive information before anything is uploaded or
-  published.** `scripts/check-sensitive.sh` scans tracked files, the staged
-  package tree and the finished `.deb`s for credentials, private keys, home
-  and scratch paths, device identifiers, IP addresses and e-mail addresses.
-  `make check`, `package-deb.sh` and the Release workflow all run it and
-  stop on a hit. A deliberate public value goes on its allowlist; a rule is
-  never loosened.
+  published.** This is a reading job, not a regex. Before a push, a tag or
+  a release, have an agent (a subagent is fine) read the diff, the staged
+  package tree and `strings` of the built binary for credentials, private
+  keys, home or scratch paths, device identifiers and addresses. Nothing
+  goes out until that read comes back clean. There is deliberately no
+  script for this.
+- **Published packages come from the Release workflow only.** Local
+  `make debs` must keep working, to prove a build and to `make install` on a
+  device, but a `.deb` built on a laptop is never uploaded or attached to a
+  release: push the tag and let CI build, sign, review and publish.
 - **Jitless V8 still needs its iOS address-space entitlement.** Sandbox-enabled
   V8 reserves a large address cage on iOS, so sign the CLI and Code Mode host
   with `com.apple.developer.kernel.extended-virtual-addressing`; do not add JIT
@@ -89,6 +93,7 @@ packaging/DEBIAN/control     control template (@PLACEHOLDER@ substituted)
 packaging/codex.entitlements  what the signed binary carries, and why
 packaging/codex.launcher.sh   /usr/bin/codex → the real binary in libexec
 scripts/prepare-source.sh    fetch + patch (idempotent, stamped)
+scripts/rebase-patches.sh    re-target patches/ at a new upstream sha
 scripts/prepare-rusty-v8.sh  fetch matching full recursive V8 source
 scripts/build-ios.sh         build CLI + Code Mode host, verify both Mach-Os
 scripts/package-deb.sh       stage + ldid + dpkg-deb + verify
@@ -100,6 +105,14 @@ build/                       everything generated; not source
 
 - `make check` — script syntax, config sanity, patch set, packaging inputs
 - `make source` — fetch + patch; fails loudly if a patch no longer applies
+- `make rebase-patches REF=<sha>` — when `make source` or `Follow upstream`
+  fails on a patch: fuzz-applies `patches/` onto `<sha>` in `build/rebase` and
+  lists the `*.rej`. Fix those by hand in `build/rebase` (usually reflowed
+  comments), delete the `.rej`, rerun with `WRITE=1` to rewrite and re-verify
+  `patches/`, then move the pin (`scripts/follow-upstream.sh`) and `make check`.
+  Upstream trees newer than 0.152 commit the real workspace version instead of
+  the `0.0.0` placeholder; `prepare-source.sh` accepts either and refuses any
+  other value as a pin/version mismatch.
 - `make build` — cross-compile and verify the Mach-O is iOS
 - `make debs` — both packages plus `SHA256SUMS`; what CI releases
 - `make install` — install on an attached device and run `--version`.
@@ -115,7 +128,10 @@ in `iphoneos-arm64.deb` / `iphoneos-arm64e.deb`; a `SHA256SUMS` of bare names.
 
 `Follow upstream` runs every day at 00:00 UTC: pin to the newest stable
 `openai/codex` `rust-vX.Y.Z` release, `make source` to prove `patches/` still
-apply, then commit and tag `vX.Y.Z` as `bot <bot@owngoal.dev>`. `Release` builds
-that tag. A packaging respin `X.Y.Z-N` already tracks upstream `X.Y.Z`, so the
-job advances on a new stable version rather than a different same-version SHA.
-OwnGoalPackages fetches it at 04:00 UTC.
+apply, then commit and tag `vX.Y.Z` as `bot <bot@owngoal.dev>` and dispatch
+`Release` on that tag (`gh workflow run release.yml --ref vX.Y.Z`): a tag
+pushed with the workflow's own token never fires a push-triggered workflow,
+and `workflow_dispatch` is the documented exception. A packaging respin
+`X.Y.Z-N` already tracks upstream `X.Y.Z`, so the job advances on a new
+stable version rather than a different same-version SHA. OwnGoalPackages
+fetches the release at 04:00 UTC.

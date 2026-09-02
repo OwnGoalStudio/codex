@@ -1,7 +1,10 @@
 diff --git a/codex-rs/shell-command/src/shell_detect.rs b/codex-rs/shell-command/src/shell_detect.rs
 --- a/codex-rs/shell-command/src/shell_detect.rs
 +++ b/codex-rs/shell-command/src/shell_detect.rs
-@@ -135,1 +135,14 @@
+@@ -189,6 +189,19 @@ fn get_elevated_sandbox_compatible_powershell_path(
+     None
+ }
+ 
 +#[cfg(target_os = "ios")]
 +fn roothide_shell(binary_name: &str) -> Option<PathBuf> {
 +    let executable_dir = std::env::current_exe().ok()?.parent()?.to_path_buf();
@@ -16,14 +19,21 @@ diff --git a/codex-rs/shell-command/src/shell_detect.rs b/codex-rs/shell-command
 +}
 +
  fn get_shell_path(
-@@ -152,1 +165,6 @@
+     shell_type: ShellType,
+     binary_name: &str,
+@@ -206,6 +219,11 @@ fn get_shell_path(
+         return Some(path);
+     }
+ 
 +    #[cfg(target_os = "ios")]
 +    if let Some(path) = roothide_shell(binary_name) {
 +        return Some(path);
 +    }
 +
      for path in fallback_paths {
-@@ -158,7 +176,12 @@
+         if let Some(path) = file_exists(std::path::Path::new(path)) {
+             return Some(path);
+@@ -215,7 +233,12 @@ fn get_shell_path(
      None
  }
  
@@ -37,7 +47,7 @@ diff --git a/codex-rs/shell-command/src/shell_detect.rs b/codex-rs/shell-command
  
  fn get_zsh_shell() -> Option<DetectedShell> {
      let shell_path = get_shell_path(ShellType::Zsh, "zsh", ZSH_FALLBACK_PATHS);
-@@ -169,7 +192,12 @@
+@@ -226,7 +249,12 @@ fn get_zsh_shell() -> Option<DetectedShell> {
      })
  }
  
@@ -51,7 +61,7 @@ diff --git a/codex-rs/shell-command/src/shell_detect.rs b/codex-rs/shell-command
  
  fn get_bash_shell() -> Option<DetectedShell> {
      let shell_path = get_shell_path(ShellType::Bash, "bash", BASH_FALLBACK_PATHS);
-@@ -180,7 +208,12 @@
+@@ -237,7 +265,12 @@ fn get_bash_shell() -> Option<DetectedShell> {
      })
  }
  
@@ -65,7 +75,7 @@ diff --git a/codex-rs/shell-command/src/shell_detect.rs b/codex-rs/shell-command
  
  fn get_sh_shell() -> Option<DetectedShell> {
      let shell_path = get_shell_path(ShellType::Sh, "sh", SH_FALLBACK_PATHS);
-@@ -241,7 +274,10 @@
+@@ -321,7 +354,10 @@ pub fn ultimate_fallback_shell() -> DetectedShell {
      } else {
          DetectedShell {
              shell_type: ShellType::Sh,
@@ -77,7 +87,7 @@ diff --git a/codex-rs/shell-command/src/shell_detect.rs b/codex-rs/shell-command
          }
      }
  }
-@@ -275,7 +311,7 @@
+@@ -355,7 +391,7 @@ pub fn default_user_shell_from_path(user_shell_path: Option<PathBuf>) -> Detecte
              .and_then(|shell| detect_shell_type(&shell))
              .and_then(get_shell);
  

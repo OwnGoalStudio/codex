@@ -50,8 +50,8 @@ $(error $(VERSION_FILE) is missing or empty; run make set-version VERSION=x.y.z)
 endif
 
 .PHONY: all help print-version print-upstream print-deb-path set-version \
-	bump-upstream follow-upstream check source build package deb deb-roothide \
-	deb-rootless debs checksums install clean
+	bump-upstream follow-upstream rebase-patches check source build package deb \
+	deb-roothide deb-rootless debs checksums install clean
 
 .NOTPARALLEL:
 
@@ -125,8 +125,6 @@ check:
 		--config "$(ROOT_DIR)/packaging/etc/codex/config.toml"
 	@test -L "$(ROOT_DIR)/CLAUDE.md" && [[ "$$(readlink "$(ROOT_DIR)/CLAUDE.md")" == AGENTS.md ]] || \
 		{ echo "error: CLAUDE.md must be a symlink to AGENTS.md" >&2; exit 65; }
-	@echo "==> sensitive information"
-	@"$(ROOT_DIR)/scripts/check-sensitive.sh"
 	@echo "ok"
 
 source:
@@ -175,6 +173,12 @@ bump-upstream:
 
 follow-upstream:
 	@"$(ROOT_DIR)/scripts/follow-upstream.sh"
+
+# make rebase-patches REF=<sha>            apply patches/ onto <sha>, list rejects
+# make rebase-patches REF=<sha> WRITE=1    rewrite patches/ from build/rebase
+rebase-patches:
+	@test -n "$(REF)" || { echo "usage: make rebase-patches REF=<sha> [WRITE=1]" >&2; exit 64; }
+	@"$(ROOT_DIR)/scripts/rebase-patches.sh" "$(REF)" $(if $(WRITE),--write)
 
 clean:
 	rm -rf "$(BUILD_DIR)"

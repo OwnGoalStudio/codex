@@ -1,6 +1,7 @@
 # Once a day, pin to the newest stable openai/codex rust-vX.Y.Z release.
 # If the pin moves and patches/ still apply, commit and tag vX.Y.Z.
-# release.yml builds that tag; OwnGoalPackages picks it up at 04:00 UTC.
+# release.yml, dispatched on that tag, builds and publishes it;
+# OwnGoalPackages picks it up at 04:00 UTC.
 
 name: Follow upstream
 
@@ -12,6 +13,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: follow-upstream
@@ -80,3 +82,12 @@ jobs:
           git tag "v${new_version}"
           git push origin HEAD:main
           git push origin "v${new_version}"
+
+      # A tag pushed with the workflow's own token never fires a push-triggered
+      # workflow; workflow_dispatch is the documented exception, so start
+      # Release explicitly on the tag.
+      - name: Build and publish the tag
+        if: env.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run release.yml --ref "v${new_version}"
