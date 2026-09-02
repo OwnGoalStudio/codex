@@ -89,7 +89,7 @@ scan_tree() { # <dir>
     local file
     while IFS= read -r -d '' file; do
         scan_file "$file"
-    done < <(find "$1" -type f ! -name .DS_Store -print0)
+    done < <(find "$1" -name .git -prune -o -type f ! -name .DS_Store -print0)
 }
 
 findings=""
