@@ -90,7 +90,6 @@ set-version:
 	@"$(VERSION_APPLIER)" "$(VERSION)"
 
 check:
-	@python3 "$(ROOT_DIR)/scripts/check-launcher.py" "$(ROOT_DIR)/packaging/codex.launcher.sh"
 	@echo "==> shell syntax"
 	@for script in "$(ROOT_DIR)"/scripts/*.sh; do bash -n "$$script" || exit 1; done
 	@if command -v shellcheck >/dev/null; then \
@@ -114,7 +113,7 @@ check:
 	done
 	@echo "==> packaging inputs"
 	@for input in packaging/DEBIAN/control packaging/codex.entitlements \
-		packaging/codex.launcher.sh packaging/release-notes.md \
+		packaging/codex.launcher.c packaging/release-notes.md \
 		packaging/etc/codex/config.toml scripts/check-skill-policy.sh; do \
 		test -f "$(ROOT_DIR)/$$input" || { echo "error: missing $$input" >&2; exit 66; }; \
 	done

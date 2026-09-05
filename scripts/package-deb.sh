@@ -32,11 +32,11 @@ source "$repository_root/configuration/upstream.env"
 package_id="${PACKAGE_ID:-wiki.qaq.codex}"
 control_template="$repository_root/packaging/DEBIAN/control"
 entitlements="$repository_root/packaging/${PROGRAM}.entitlements"
-launcher_template="$repository_root/packaging/${PROGRAM}.launcher.sh"
+launcher_source="$repository_root/packaging/${PROGRAM}.launcher.c"
 system_config="$repository_root/packaging/etc/codex/config.toml"
 skill_policy_check="$repository_root/scripts/check-skill-policy.sh"
 
-for input in "$control_template" "$entitlements" "$launcher_template" "$system_config" "$skill_policy_check"; do
+for input in "$control_template" "$entitlements" "$launcher_source" "$system_config" "$skill_policy_check"; do
     [[ -f "$input" ]] || { echo "error: missing packaging input: $input" >&2; exit 66; }
 done
 
@@ -58,7 +58,7 @@ iphoneos-arm64:/var/jb | iphoneos-arm64e:) ;;
 *) echo "error: architecture and install prefix name different bootstrap layouts" >&2; exit 64 ;;
 esac
 
-for tool in ldid dpkg-deb; do
+for tool in ldid dpkg-deb xcrun vtool; do
     command -v "$tool" >/dev/null || { echo "error: $tool is not installed" >&2; exit 69; }
 done
 
@@ -88,7 +88,10 @@ installed_system_config="$installed_root/etc/codex/config.toml"
 mkdir -p "$debian" "$(dirname "$installed_libexec")" "$(dirname "$installed_launcher")" "$(dirname "$installed_system_config")"
 
 /usr/bin/ditto "$payload" "$installed_libexec"
-sed -e "s|@PREFIX@|$install_prefix|g" "$launcher_template" >"$installed_launcher"
+sdk_path="$(xcrun --sdk iphoneos --show-sdk-path)"
+xcrun clang -target "arm64-apple-ios$MIN_IOS" -isysroot "$sdk_path" -Os -fvisibility=hidden \
+    "-DOG_PROGRAM=\"$PROGRAM\"" "-DOG_STATIC_PREFIX=\"$install_prefix\"" \
+    "$launcher_source" -Wl,-dead_strip -o "$installed_launcher"
 /usr/bin/ditto "$system_config" "$installed_system_config"
 chmod 0644 "$installed_system_config"
 
@@ -98,22 +101,13 @@ chmod 0755 \
     "$installed_libexec/$CODE_MODE_HOST_BIN"
 chmod -R a+rX "$installed_libexec"
 
-head -n1 "$installed_launcher" | grep -qxF "#!$install_prefix/bin/sh" || {
-    echo "error: launcher interpreter is not $install_prefix/bin/sh" >&2
+vtool -show-build "$installed_launcher" 2>/dev/null | grep -qE '^ *platform (IOS|2)$' || {
+    echo "error: launcher is not an iOS binary" >&2
     exit 65
 }
-grep -qF "exec $install_prefix/usr/libexec/$PROGRAM/$PROGRAM \"\$@\"" "$installed_launcher" || {
-    echo "error: launcher does not exec the installed binary" >&2
-    exit 65
-}
-if grep -q '@PREFIX@' "$installed_launcher"; then
-    echo "error: launcher still holds an unsubstituted @PREFIX@" >&2
-    exit 65
-fi
-# Exercise the launcher contract instead of matching a private variable name.
-python3 "$repository_root/scripts/check-launcher.py" "$launcher_template"
 
 for binary in \
+    "$installed_launcher" \
     "$installed_libexec/$PROGRAM" \
     "$installed_libexec/$CODE_MODE_HOST_BIN"; do
     ldid -S"$entitlements" -Cadhoc "$binary"
@@ -132,6 +126,7 @@ require_true() {
     }
 }
 for binary in \
+    "$installed_launcher" \
     "$installed_libexec/$PROGRAM" \
     "$installed_libexec/$CODE_MODE_HOST_BIN"; do
     ldid -e "$binary" >"$signed_entitlements"
