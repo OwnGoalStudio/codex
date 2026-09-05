@@ -77,6 +77,7 @@ int main(int argc, char **argv) {
     if (!join_path(executable, prefix, "/usr/libexec/" OG_PROGRAM "/" OG_PROGRAM)) return 127;
     argv[0] = executable;
     execv(executable, argv);
-    fprintf(stderr, "%s: cannot execute %s: %s\n", OG_PROGRAM, executable, strerror(errno));
-    return errno == ENOENT ? 127 : 126;
+    int error = errno;
+    fprintf(stderr, "%s: cannot execute %s: %s\n", OG_PROGRAM, executable, strerror(error));
+    return error == ENOENT ? 127 : 126;
 }

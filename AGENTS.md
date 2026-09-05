@@ -93,7 +93,7 @@ configuration/version.txt    package version
 patches/NNNN-*.patch         applied in sorted order to a pristine checkout
 packaging/DEBIAN/control     control template (@PLACEHOLDER@ substituted)
 packaging/codex.entitlements  what the signed binary carries, and why
-packaging/codex.launcher.sh   /usr/bin/codex → the real binary in libexec
+packaging/codex.launcher.c    Mach-O /usr/bin/codex → the real binary in libexec
 scripts/prepare-source.sh    fetch + patch (idempotent, stamped)
 scripts/rebase-patches.sh    re-target patches/ at a new upstream sha
 scripts/prepare-rusty-v8.sh  fetch matching full recursive V8 source
@@ -151,10 +151,14 @@ and verify the extracted signature after packaging; a correct package layout
 alone does not establish access to RootHide's app-container installation path.
 Source: https://github.com/roothide/Developer/blob/main/README.md
 
-For payloads that do not use vroot, the launcher exports physical bootstrap
-PATH, SHELL and default CA/browser paths. Preserve explicit CA/browser settings
-and already physical or custom SHELL paths. Host launcher tests simulate the
-path boundary and verify argv/exit status; they do not prove that iOS loads the
-binary. Test the installed package from both zsh and fish on a RootHide device.
+For payloads that do not use vroot, the Mach-O launcher asks RootHide's
+`/usr/lib/libroot.dylib` for the physical bootstrap root, then exports physical
+PATH, SHELL and default CA/browser paths. The rootless build compiles in
+`/var/jb` and does not load libroot. Preserve explicit CA/browser settings and
+already physical or custom SHELL paths. `execv` is intentional in this tiny,
+single-threaded launcher: replacing it with a shell script breaks direct
+execution from fish because the kernel cannot resolve RootHide's `/bin/sh`
+shebang. Both launcher and payload are separately signed. Test the installed
+package from sh, zsh and fish on a RootHide device.
 Do not add vroot to a payload while retaining a launcher that exports physical
 paths: the filesystem view must remain consistent across the boundary.
