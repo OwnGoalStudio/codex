@@ -28,7 +28,8 @@ execute the same code.
   (`@PREFIX@`), not in Rust.
 - **Versions live in `configuration/version.txt` only.** `X.Y.Z` tracks
   upstream's crate version; `X.Y.Z-N` is a packaging-only respin.
-- **Do not link libvroot into this binary.** See below.
+- **Current payload uses physical paths.** Re-evaluate official vroot for a
+  RootHide port, but change its launcher and all path consumers together. See below.
 - **`CLAUDE.md` is a symlink to `AGENTS.md`**, never a file of its own. One
   set of notes, two names; `make check` enforces it.
 - **Review for sensitive information before anything is uploaded or
@@ -47,7 +48,7 @@ execute the same code.
   with `com.apple.developer.kernel.extended-virtual-addressing`; do not add JIT
   or unsigned-executable-memory entitlements to solve an address-space failure.
 
-## libvroot is not our problem, and not our solution
+## Current RootHide filesystem boundary
 
 RootHide's one-line summary is `roothide = rootful + libvroot`.
 
@@ -62,9 +63,10 @@ helpers does **not** need a `/var/jb` patch on roothide.
 Rootless has no such shim. `/bin/sh` is simply absent (`/var/jb/bin/sh` → dash).
 That is the Procursus git `SHELL_PATH=$(MEMO_PREFIX).../bin/sh` patch.
 
-This binary is **Rust**. rustc talks to libSystem directly. It is not built
-with libvroot, and injecting vroot into a Rust std::process is not something
-we will do. Consequences:
+This binary is **Rust**. rustc talks to libSystem directly. It currently is not built
+with libvroot. Rust is not itself a reason to reject import rewriting (fish and
+coreutils use it); adopting it here requires checking all dependencies and replacing
+the physical-path launcher contract together. Consequences:
 
 - A vroot parent shell may export `SHELL=/bin/zsh`. That path is true *inside*
   the parent, and a lie to this process: `is_executable("/bin/zsh")` looks at
@@ -138,3 +140,21 @@ and `workflow_dispatch` is the documented exception. A packaging respin
 `X.Y.Z-N` already tracks upstream `X.Y.Z`, so the job advances on a new
 stable version rather than a different same-version SHA. OwnGoalPackages
 fetches the release at 04:00 UTC.
+
+## RootHide signing and launcher checks
+
+RootHide's official Developer README requires both
+`com.apple.private.security.storage.AppBundles` and
+`com.apple.private.security.storage.AppDataContainers`, in addition to the
+platform and no-sandbox entitlements. Keep these in the executable signature
+and verify the extracted signature after packaging; a correct package layout
+alone does not establish access to RootHide's app-container installation path.
+Source: https://github.com/roothide/Developer/blob/main/README.md
+
+For payloads that do not use vroot, the launcher exports physical bootstrap
+PATH, SHELL and default CA/browser paths. Preserve explicit CA/browser settings
+and already physical or custom SHELL paths. Host launcher tests simulate the
+path boundary and verify argv/exit status; they do not prove that iOS loads the
+binary. Test the installed package from both zsh and fish on a RootHide device.
+Do not add vroot to a payload while retaining a launcher that exports physical
+paths: the filesystem view must remain consistent across the boundary.

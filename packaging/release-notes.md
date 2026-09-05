@@ -24,3 +24,9 @@ Upstream [`openai/codex@@UPSTREAM_SHORT@`](https://github.com/openai/codex/commi
 Verify your download against `SHA256SUMS`.
 
 **Full changelog**: https://github.com/owngoal-dev/codex/commits/@TAG@
+
+This packaging revision updates RootHide compatibility checks and signing.
+CLI startup passes bootstrap paths to payloads that use the physical filesystem;
+RootHide virtual-filesystem utilities retain their official import rewriting.
+RootHide device validation is pending; a successful build is not a claim that
+all interactive runtime paths have been tested.

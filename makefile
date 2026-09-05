@@ -90,6 +90,7 @@ set-version:
 	@"$(VERSION_APPLIER)" "$(VERSION)"
 
 check:
+	@python3 "$(ROOT_DIR)/scripts/check-launcher.py" "$(ROOT_DIR)/packaging/codex.launcher.sh"
 	@echo "==> shell syntax"
 	@for script in "$(ROOT_DIR)"/scripts/*.sh; do bash -n "$$script" || exit 1; done
 	@if command -v shellcheck >/dev/null; then \

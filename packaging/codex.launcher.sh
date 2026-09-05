@@ -1,35 +1,50 @@
 #!@PREFIX@/bin/sh
-#
-# The real binary lives in libexec so a later sidecar can sit beside it
-# without polluting /usr/bin.
-#
-# @PREFIX@ is substituted at package time: empty for roothide, whose vroot
-# shell resolves unprefixed paths inside its randomized jbroot, and /var/jb for
-# rootless, where every path has to be spelled out — including this script's
-# own interpreter. The Rust binary itself is not vroot-linked.
-#
-# rustls-native-certs treats iOS as Unix, not macOS, so it probes openssl
-# paths on the real rootfs (`/etc/ssl/cert.pem`) which are empty. Point it
-# at the bootstrap CA bundle unless the user already set one. Codex's own
-# websocket TLS builder reads the same SSL_CERT_FILE / CODEX_CA_CERTIFICATE.
-if [ -z "${SSL_CERT_FILE:-}" ]; then
-	for _codex_ca in \
-		"@PREFIX@/etc/ssl/cert.pem" \
-		"@PREFIX@/etc/ssl/certs/ca-certificates.crt" \
-		"/var/jb/etc/ssl/cert.pem" \
-		"/etc/ssl/cert.pem"
-	do
-		if [ -r "$_codex_ca" ]; then
-			# RootHide shell paths are jbroot-based. Convert the chosen path to
-			# the physical path that the unlinked Rust process must open.
-			if [ -z "@PREFIX@" ]; then
-				_codex_ca="$(jbroot "$_codex_ca")" || exit $?
-			fi
-			SSL_CERT_FILE="$_codex_ca"
-			export SSL_CERT_FILE
-			break
-		fi
-	done
-	unset _codex_ca
+
+# The payload uses libSystem directly. Export physical bootstrap paths so
+# subprocess lookup and TLS work outside the parent's RootHide filesystem view.
+_og_prefix="@PREFIX@"
+if [ -z "$_og_prefix" ]; then
+    _og_prefix="$(jbroot /)" || {
+        echo "codex: cannot resolve RootHide bootstrap with jbroot" >&2
+        exit 127
+    }
+    case "$_og_prefix" in
+        /*) ;;
+        *) echo "codex: jbroot returned an invalid path" >&2; exit 127 ;;
+    esac
+    _og_prefix=${_og_prefix%/}
 fi
+PATH="$_og_prefix/usr/local/bin:$_og_prefix/usr/bin:$_og_prefix/bin:$_og_prefix/usr/sbin:$_og_prefix/sbin${PATH:+:$PATH}"
+
+# Only translate bootstrap shell paths; a physical or custom SHELL stays intact.
+case "${SHELL:-}" in
+    /bin/*|/usr/bin/*) SHELL="$_og_prefix$SHELL" ;;
+esac
+if [ -z "${SHELL:-}" ]; then
+    for _og_shell in /bin/zsh /usr/bin/zsh /bin/bash /usr/bin/bash /bin/sh /usr/bin/sh; do
+        if [ -x "@PREFIX@$_og_shell" ]; then
+            SHELL="$_og_prefix$_og_shell"
+            break
+        fi
+    done
+fi
+export PATH SHELL
+
+# Preserve explicit user CA settings. Test in the shell's view, then pass the
+# physical path to the payload (which cannot open RootHide's virtual /etc).
+if [ -z "${SSL_CERT_FILE:-}" ]; then
+    for _og_ca in /etc/ssl/cert.pem /etc/ssl/certs/ca-certificates.crt; do
+        if [ -r "@PREFIX@$_og_ca" ]; then
+            SSL_CERT_FILE="$_og_prefix$_og_ca"
+            export SSL_CERT_FILE
+            break
+        fi
+    done
+fi
+if [ -z "${BROWSER:-}" ] && [ -x "@PREFIX@/usr/bin/uiopen" ]; then
+    BROWSER="$_og_prefix/usr/bin/uiopen"
+    export BROWSER
+fi
+unset _og_prefix _og_shell _og_ca
+
 exec @PREFIX@/usr/libexec/codex/codex "$@"

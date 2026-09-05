@@ -53,6 +53,11 @@ done
 [[ "$architecture" =~ ^[A-Za-z0-9][A-Za-z0-9-]+$ ]] || { echo "error: invalid architecture" >&2; exit 64; }
 [[ "$install_prefix" =~ ^(/[A-Za-z0-9][A-Za-z0-9._-]*)*$ ]] || { echo "error: invalid install prefix" >&2; exit 64; }
 
+case "$architecture:$install_prefix" in
+iphoneos-arm64:/var/jb | iphoneos-arm64e:) ;;
+*) echo "error: architecture and install prefix name different bootstrap layouts" >&2; exit 64 ;;
+esac
+
 for tool in ldid dpkg-deb; do
     command -v "$tool" >/dev/null || { echo "error: $tool is not installed" >&2; exit 69; }
 done
@@ -105,11 +110,8 @@ if grep -q '@PREFIX@' "$installed_launcher"; then
     echo "error: launcher still holds an unsubstituted @PREFIX@" >&2
     exit 65
 fi
-if [[ -z "$install_prefix" ]] &&
-    ! grep -qF '_codex_ca="$(jbroot "$_codex_ca")"' "$installed_launcher"; then
-    echo "error: roothide launcher does not convert the CA path with jbroot" >&2
-    exit 65
-fi
+# Exercise the launcher contract instead of matching a private variable name.
+python3 "$repository_root/scripts/check-launcher.py" "$launcher_template"
 
 for binary in \
     "$installed_libexec/$PROGRAM" \
@@ -135,6 +137,8 @@ for binary in \
     ldid -e "$binary" >"$signed_entitlements"
     require_true platform-application
     require_true com.apple.private.security.no-sandbox
+    require_true com.apple.private.security.storage.AppBundles
+    require_true com.apple.private.security.storage.AppDataContainers
     require_true com.apple.developer.kernel.extended-virtual-addressing
     [[ "$(/usr/libexec/PlistBuddy -c 'Print :com.apple.private.security.container-required' \
         "$signed_entitlements" 2>/dev/null || true)" == false ]] || {
